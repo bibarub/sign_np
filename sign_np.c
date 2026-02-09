@@ -544,8 +544,7 @@ int main(int argc, char *argv[])
 		if (elf == NULL)
 		{
 			printf("ERROR: Please check your input file!\n");
-			fclose(elf);
-			fclose(bin);
+			if (bin) fclose(bin);
 			return 0;
 		}
 		
@@ -554,7 +553,6 @@ int main(int argc, char *argv[])
 		{
 			printf("ERROR: Please check your output file!\n");
 			fclose(elf);
-			fclose(bin);
 			return 0;
 		}
 		
@@ -661,8 +659,7 @@ int main(int argc, char *argv[])
 		if (iso == NULL)
 		{
 			printf("ERROR: Please check your input file!\n");
-			fclose(iso);
-			fclose(pbp);
+			if (pbp) fclose(pbp);
 			return 0;
 		}
 		
@@ -671,14 +668,13 @@ int main(int argc, char *argv[])
 		{
 			printf("ERROR: Please check your output file!\n");
 			fclose(iso);
-			fclose(pbp);
 			return 0;
 		}
 			
 		// Get ISO size.
-		fseeko64(iso, 0, SEEK_END);
-		long long iso_size = ftello64(iso);
-		fseeko64(iso, 0, SEEK_SET);
+		fseeko(iso, 0, SEEK_END);
+		long long iso_size = ftello(iso);
+		fseeko(iso, 0, SEEK_SET);
 		
 		// Initialize KIRK.
 		printf("Initializing KIRK engine...\n\n");
@@ -703,9 +699,10 @@ int main(int argc, char *argv[])
 				FILE* ex_file1 = fopen(ex_file_name1, "rb");
 			
 				if (ex_file1 != NULL)
+				{
 					fread(ex_file1_magic, 4, 1, ex_file1);
-			
-				fclose(ex_file1);
+				    fclose(ex_file1);
+				}
 			
 				// Check for PNG header.
 				if (!memcmp(ex_file1_magic, png_magic, 4))
@@ -735,9 +732,10 @@ int main(int argc, char *argv[])
 				FILE* ex_file2 = fopen(ex_file_name2, "rb");
 				
 				if (ex_file2 != NULL)
+			    {
 					fread(ex_file2_magic, 4, 1, ex_file2);
-				
-				fclose(ex_file2);
+				    fclose(ex_file2);
+				}
 				
 				// Check for PNG header.
 				if (!memcmp(ex_file2_magic, png_magic, 4))
@@ -772,7 +770,6 @@ int main(int argc, char *argv[])
 			if (opnssmp == NULL)
 			{
 				printf("ERROR: Please check your OPNSSMP file!\n");
-				fclose(opnssmp);
 				fclose(iso);
 				fclose(pbp);
 				return 0;
@@ -817,7 +814,6 @@ int main(int argc, char *argv[])
 			if (png == NULL)
 			{
 				printf("ERROR: Please check your STARTDAT file!\n");
-				fclose(png);
 				fclose(iso);
 				fclose(pbp);
 				return 0;
@@ -833,7 +829,8 @@ int main(int argc, char *argv[])
 			startdat_buf = (u8 *) malloc (startdat_size);
 			
 			// Build STARTDAT header.
-			STARTDAT_HEADER sd_header[0x50];
+			char sd_header_buf[0x50];
+			STARTDAT_HEADER *sd_header = (STARTDAT_HEADER *)&sd_header_buf;
 			memset(sd_header, 0, 0x50);
 			
 			// Set magic STARTDAT.
@@ -889,15 +886,15 @@ int main(int argc, char *argv[])
 		int np_size = 0x100;
 		
 		// Write NPUMDIMG table.
-		printf("NPUMDIMG table size: %I64d\n", table_size);
+		printf("NPUMDIMG table size: %lld\n", table_size);
 		printf("Writing NPUMDIMG table...\n\n");
 		u8 *table_buf = malloc(table_size);
 		memset(table_buf, 0, table_size);
 		fwrite(table_buf, table_size, 1, pbp);
 		
 		// Write ISO blocks.
-		printf("ISO size: %I64d\n", iso_size);
-		printf("ISO blocks: %I64d\n", iso_blocks);
+		printf("ISO size: %lld\n", iso_size);
+		printf("ISO blocks: %lld\n", iso_blocks);
 		long long iso_offset = 0x100 + table_size;
 		u8 *iso_buf = malloc(block_size * 2);
 		u8 *lzrc_buf = malloc(block_size * 2);
@@ -911,9 +908,9 @@ int main(int argc, char *argv[])
 
 			// Read ISO block.
 			memset(iso_buf, 0, block_size);
-			if ((ftello64(iso) + block_size) > iso_size)
+			if ((ftello(iso) + block_size) > iso_size)
 			{
-				long long remaining = iso_size - ftello64(iso);
+				long long remaining = iso_size - ftello(iso);
 				fread(iso_buf, remaining, 1, iso);
 				wsize = remaining;
 			}
@@ -966,7 +963,7 @@ int main(int argc, char *argv[])
 
 			// Update offset.
 			iso_offset += wsize;
-			printf("\rWriting ISO blocks: %02I64d%%", i * 100 / iso_blocks);
+			printf("\rWriting ISO blocks: %02lld%%", i * 100 / iso_blocks);
 		}
 		printf("\rWriting ISO blocks: 100%%\n\n");
 		
@@ -999,9 +996,9 @@ int main(int argc, char *argv[])
 		printf("\n\n");
 	
 		// Update NPUMDIMG header and NP table.
-		fseeko64(pbp, np_offset, SEEK_SET);
+		fseeko(pbp, np_offset, SEEK_SET);
 		fwrite(npumdimg, np_size, 1, pbp);
-		fseeko64(pbp, table_offset, SEEK_SET);
+		fseeko(pbp, table_offset, SEEK_SET);
 		fwrite(table_buf, table_size, 1, pbp);
 		
 		// Clean up.

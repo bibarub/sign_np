@@ -305,7 +305,7 @@ static int findFile(const char * file, u32 lba, u32 dir_size, u32 is_dir, Iso966
 
 			if (0 == strcmp(name, file)) {
 				if (is_dir) {
-					if(!rec->fileFlags & ISO9660_FILEFLAGS_DIR) {
+					if(!(rec->fileFlags & ISO9660_FILEFLAGS_DIR)) {
 						return -14;
 					}
 				}
@@ -428,7 +428,6 @@ int isoOpen(const char *path)
 			g_ciso_dec_buf = malloc(CISO_DEC_BUFFER_SIZE);
 
 			if (g_ciso_dec_buf == NULL) {
-				printf("malloc -> 0x%08x\n", (u32)g_ciso_dec_buf);
 				ret = -6;
 				goto error;
 			}

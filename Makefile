@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -I./libkirk
+CFLAGS = -Wno-unused-result -I./libkirk
 
 ifeq ($(DEBUG), 1)
 CFLAGS+=-g -O0
@@ -22,5 +22,3 @@ all: $(TARGET2)
 
 $(TARGET2): $(OBJS2)
 	$(CC) $(CFLAGS) -o $@ $(OBJS2) -L ./libkirk -lkirk -lz
-
-

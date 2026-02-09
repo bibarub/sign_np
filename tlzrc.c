@@ -306,14 +306,14 @@ static void re_normalize(LZRC_DECODE *re)
 static void re_bit(LZRC_DECODE *re, u8 *prob, int bit)
 {
 	u32 bound;
-	u32 old_r, old_c;
-	u8 old_p;
+	u32 /*old_r,*/ old_c;
+	//u8 old_p;
 
 	re_normalize(re);
 
-	old_r = re->range;
+	//old_r = re->range;
 	old_c = re->code;
-	old_p = *prob;
+	//old_p = *prob;
 
 	bound = (re->range >> 8) * (*prob);
 	*prob -= *prob >> 3;
@@ -431,12 +431,12 @@ static void remove_node(LZRC_DECODE *re, int p)
 
 static int insert_node(LZRC_DECODE *re, int pos, int *match_len, int *match_dist, int do_cmp)
 {
-	u8 *src, *win;
+	u8 *src/*, *win*/;
 	int i, t, p;
 	int content_size;
 
 	src = text_buf + pos;
-	win = text_buf + t_start;
+	//win = text_buf + t_start;
 	content_size = (t_fill < pos) ? (65280 + t_fill - pos) : (t_fill - pos);
 	t_len = 1;
 	t_pos = 0;

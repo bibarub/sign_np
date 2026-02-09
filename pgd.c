@@ -127,37 +127,37 @@ int encrypt_pgd(u8* data, int data_size, int block_size, int key_index, int drm_
 int decrypt_pgd(u8* pgd_data, int pgd_size, int flag, u8* key)
 {
 	int result;
-	PGD_HEADER PGD[sizeof(PGD_HEADER)];
+	PGD_HEADER PGD;
 	MAC_KEY mkey;
 	CIPHER_KEY ckey;
 	u8* fkey;
 
 	// Read in the PGD header parameters.
-	memset(PGD, 0, sizeof(PGD_HEADER));
+	memset(&PGD, 0, sizeof(PGD_HEADER));
 
-	PGD->buf = pgd_data;
-	PGD->key_index = *(u32*)(pgd_data + 4);
-	PGD->drm_type  = *(u32*)(pgd_data + 8);
+	PGD.buf = pgd_data;
+	PGD.key_index = *(u32*)(pgd_data + 4);
+	PGD.drm_type  = *(u32*)(pgd_data + 8);
 
 	// Set the hashing, crypto and open modes.
-	if (PGD->drm_type == 1)
+	if (PGD.drm_type == 1)
 	{
-		PGD->mac_type = 1;
+		PGD.mac_type = 1;
 		flag |= 4;
 
-		if(PGD->key_index > 1)
+		if(PGD.key_index > 1)
 		{
-			PGD->mac_type = 3;
+			PGD.mac_type = 3;
 			flag |= 8;
 		}
-		PGD->cipher_type = 1;
+		PGD.cipher_type = 1;
 	}
 	else
 	{
-		PGD->mac_type = 2;
-		PGD->cipher_type = 2;
+		PGD.mac_type = 2;
+		PGD.cipher_type = 2;
 	}
-	PGD->open_flag = flag;
+	PGD.open_flag = flag;
 
 	// Get the fixed DNAS key.
 	fkey = NULL;
@@ -173,7 +173,7 @@ int decrypt_pgd(u8* pgd_data, int pgd_size, int flag, u8* key)
 	}
 
 	// Test MAC hash at 0x80 (DNAS hash).
-	sceDrmBBMacInit(&mkey, PGD->mac_type);
+	sceDrmBBMacInit(&mkey, PGD.mac_type);
 	sceDrmBBMacUpdate(&mkey, pgd_data, 0x80);
 	result = sceDrmBBMacFinal2(&mkey, pgd_data + 0x80, fkey);
 
@@ -184,7 +184,7 @@ int decrypt_pgd(u8* pgd_data, int pgd_size, int flag, u8* key)
 	}
 
 	// Test MAC hash at 0x70 (key hash).
-	sceDrmBBMacInit(&mkey, PGD->mac_type);
+	sceDrmBBMacInit(&mkey, PGD.mac_type);
 	sceDrmBBMacUpdate(&mkey, pgd_data, 0x70);
 
 	// If a key was provided, check it against MAC 0x70.
@@ -198,41 +198,41 @@ int decrypt_pgd(u8* pgd_data, int pgd_size, int flag, u8* key)
 		}
 		else
 		{
-			memcpy(PGD->vkey, key, 16);
+			memcpy(PGD.vkey, key, 16);
 		}
 	}
 	else
 	{
 		// Generate the key from MAC 0x70.
-		bbmac_getkey(&mkey, pgd_data + 0x70, PGD->vkey);
+		bbmac_getkey(&mkey, pgd_data + 0x70, PGD.vkey);
 	}
 
 	// Decrypt the PGD header block (0x30 bytes).
-	sceDrmBBCipherInit(&ckey, PGD->cipher_type, 2, pgd_data + 0x10, PGD->vkey, 0);
+	sceDrmBBCipherInit(&ckey, PGD.cipher_type, 2, pgd_data + 0x10, PGD.vkey, 0);
 	sceDrmBBCipherUpdate(&ckey, pgd_data + 0x30, 0x30);
 	sceDrmBBCipherFinal(&ckey);
 
 	// Get the decryption parameters from the decrypted header.
-	PGD->data_size   = *(u32*)(pgd_data + 0x44);
-	PGD->block_size  = *(u32*)(pgd_data + 0x48);
-	PGD->data_offset = *(u32*)(pgd_data + 0x4c);
+	PGD.data_size   = *(u32*)(pgd_data + 0x44);
+	PGD.block_size  = *(u32*)(pgd_data + 0x48);
+	PGD.data_offset = *(u32*)(pgd_data + 0x4c);
 
 	// Additional size variables.
-	PGD->align_size = (PGD->data_size + 15) &~ 15;
-	PGD->table_offset = PGD->data_offset + PGD->align_size;
-	PGD->block_nr = (PGD->align_size + PGD->block_size - 1) &~ (PGD->block_size - 1);
-	PGD->block_nr = PGD->block_nr / PGD->block_size;
+	PGD.align_size = (PGD.data_size + 15) &~ 15;
+	PGD.table_offset = PGD.data_offset + PGD.align_size;
+	PGD.block_nr = (PGD.align_size + PGD.block_size - 1) &~ (PGD.block_size - 1);
+	PGD.block_nr = PGD.block_nr / PGD.block_size;
 
-	if ((PGD->align_size + PGD->block_nr * 16) > pgd_size)
+	if ((PGD.align_size + PGD.block_nr * 16) > pgd_size)
 	{
 		printf("ERROR: Invalid PGD data size!\n");
 		return -1;
 	}
 
 	// Test MAC hash at 0x60 (table hash).
-	sceDrmBBMacInit(&mkey, PGD->mac_type);
-	sceDrmBBMacUpdate(&mkey, pgd_data + PGD->table_offset, PGD->block_nr * 16);
-	result = sceDrmBBMacFinal2(&mkey, pgd_data + 0x60, PGD->vkey);
+	sceDrmBBMacInit(&mkey, PGD.mac_type);
+	sceDrmBBMacUpdate(&mkey, pgd_data + PGD.table_offset, PGD.block_nr * 16);
+	result = sceDrmBBMacFinal2(&mkey, pgd_data + 0x60, PGD.vkey);
 
 	if (result)
 	{
@@ -241,9 +241,9 @@ int decrypt_pgd(u8* pgd_data, int pgd_size, int flag, u8* key)
 	}
 
 	// Decrypt the data.
-	sceDrmBBCipherInit(&ckey, PGD->cipher_type, 2, pgd_data + 0x30, PGD->vkey, 0);
-	sceDrmBBCipherUpdate(&ckey, pgd_data + 0x90, PGD->align_size);
+	sceDrmBBCipherInit(&ckey, PGD.cipher_type, 2, pgd_data + 0x30, PGD.vkey, 0);
+	sceDrmBBCipherUpdate(&ckey, pgd_data + 0x90, PGD.align_size);
 	sceDrmBBCipherFinal(&ckey);
 
-	return PGD->data_size;
+	return PGD.data_size;
 }
